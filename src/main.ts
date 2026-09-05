@@ -1,6 +1,6 @@
 import './style.css';
 import * as THREE from 'three';
-import {BufferGeometry, LineBasicMaterial, PointsMaterial, Vector3} from 'three';
+import {BufferGeometry, Vector3} from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {KbRand} from './utils/KbRand';
 import {BoxKb} from "./models/BoxKb.ts";
@@ -53,7 +53,15 @@ const controls = new OrbitControls(camera, renderer.domElement);
 
 const dropsBuffer = new BufferGeometry();
 dropsBuffer.setAttribute("position", new THREE.BufferAttribute(verticesBuffer, 3));
-const dropsMaterial = new PointsMaterial({color: "white", size: 0.001});
+//const dropsMaterial = new PointsMaterial({color: "white", size: 0.001});
+const glowTexture = createGlowTexture();
+const dropsMaterial = new THREE.PointsMaterial({
+    size: 0.04,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    map: glowTexture,
+});
 const dropsMesh = new THREE.Points(dropsBuffer, dropsMaterial);
 scene.add(dropsMesh);
 
@@ -198,4 +206,26 @@ function procRandomEvents(now: number, dt: number) {
         const bg = new Droplet(pos, droplets.length, dropSize, now, now + rand.normalIn(500, 2500));
         droplets.push(bg);
     }
+}
+
+function createGlowTexture() {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 64;
+
+    const ctx = canvas.getContext("2d")!;
+
+    const gradient = ctx.createRadialGradient(
+        32, 32, 0,
+        32, 32, 32,
+    );
+
+    gradient.addColorStop(0, "rgba(255,255,255,1)");
+    gradient.addColorStop(0.1, "rgba(255,255,255,1)");
+    gradient.addColorStop(0.2, "rgba(255,255,255,0.1)");
+    gradient.addColorStop(1, "rgba(255,255,255,0)");
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 64, 64);
+
+    return new THREE.CanvasTexture(canvas);
 }

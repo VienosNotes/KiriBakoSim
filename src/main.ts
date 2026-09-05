@@ -1,19 +1,20 @@
 import './style.css';
 import * as THREE from 'three';
 import { LineBasicMaterial, Vector3} from "three";
-import {toRad, rnd, rndAngle} from './utils/utils';
+import {toRad} from './utils/utils';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
-
+import {KbRand} from './utils/KbRand';
 
 
 const kbWidth = 2;
 const kbHeight = 0.5;
 const kbDepth = 2;
+const kbNorm = new THREE.Vector3(kbWidth, kbHeight, kbDepth).length();
 
 const lines: THREE.Line[] = [];
-const drops = [];
+const droplets = [];
 
-
+const rand = new KbRand();
 initControls();
 const canvas = document.querySelector('#c')!;
 
@@ -61,9 +62,9 @@ function buildLight() {
 
 function getRandomPointInKb(width : number, height : number, depth: number) {
     return new Vector3(
-        rnd(-width/2, width/2),
-        rnd(-height/2, height/2),
-        rnd(-depth/2, depth/2),
+        rand.uniformIn(-width/2, width/2),
+        rand.uniformIn(-height/2, height/2),
+        rand.uniformIn(-depth/2, depth/2),
     );
 }
 
@@ -79,16 +80,20 @@ function initControls()
 function castRandomMuon() {
     console.log("muon!");
     const point = getRandomPointInKb(kbWidth, kbHeight, kbDepth);
-    const angle = rndAngle();
+    const angle = rand.randomDirection();
 
-    const p1 = point.clone().addScaledVector(angle, -10);
-    const p2 = point.clone().addScaledVector(angle, 10);
+    const p1 = point.clone().addScaledVector(angle, -kbNorm);
+    const p2 = point.clone().addScaledVector(angle, kbNorm);
     const geometry = new THREE.BufferGeometry().setFromPoints([p1,p2]);
     const material = new LineBasicMaterial({color: "orange"});
     const line = new THREE.Line(geometry, material);
 
     lines.push(line);
     scene.add(line);
+}
+
+function putDroplet(particlePos: Vector3) {
+
 }
 
 function clearLines(): void {

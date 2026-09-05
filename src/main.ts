@@ -15,6 +15,7 @@ const maxDrops = 100000;
 const lines: THREE.Line[] = [];
 let droplets: Droplet[] = [];
 let verticesBuffer: Float32Array = new Float32Array(maxDrops * 3);
+let lastUpdated = 0;
 
 const rand = new KbRand();
 initControls();
@@ -45,11 +46,12 @@ scene.add(dropsMesh);
 
 renderer.setAnimationLoop(update);
 
-function update()
+function update(time: number)
 {
     controls.update();
-    updateDrops();
+    updateDrops(time);
     renderer.render(scene, camera);
+    lastUpdated = time;
 }
 
 function buildKiribako() {
@@ -96,7 +98,7 @@ function castRandomMuon() {
     const particle = new Muon(direction, 1, p1, rand);
 
     const current = p1.clone();
-    const now = Date.now();
+    const now = lastUpdated;
 
     while(p2.clone().sub(current).dot(direction) > 0)
     {
@@ -104,7 +106,7 @@ function castRandomMuon() {
         particle.position = current;
         const sensitivity = kb.getLocalSensitivity(current);
         const created = particle.sampleDroplets(sensitivity, sd).filter(d => kb.contains(d));
-        created.forEach(d => droplets.push(new Droplet(d, bufIdx++, now, now + rand.normalIn(500, 2000))));
+        created.forEach(d => droplets.push(new Droplet(d, bufIdx++, now, now + rand.normalIn(0, 2000))));
     }
 
     const geometry = new THREE.BufferGeometry().setFromPoints([p1,p2]);
@@ -120,8 +122,8 @@ function clearLines(): void {
     lines.splice(0);
 }
 
-function updateDrops() {
-    const now = Date.now();
+function updateDrops(time: number) {
+    const now = time
     const attr = dropsBuffer.getAttribute("position") as THREE.BufferAttribute;
     let i = 0;
     const nextDrops: Droplet[] = [];
@@ -144,5 +146,5 @@ function updateDrops() {
 
 function next(drop: Droplet, now: number) : Vector3 | undefined {
     if (drop.expiredAt < now) { return undefined; }
-    return drop.position;
+    return drop.position.add(new Vector3(0, -drop.fallSpeed * (drop.fallSpeed * (now - lastUpdated) / 1000), 0));
 }

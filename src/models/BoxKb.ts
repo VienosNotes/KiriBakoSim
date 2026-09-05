@@ -38,6 +38,4 @@ export class BoxKb {
             Math.abs(position.y) >= this.height / 2 ||
             Math.abs(position.z) >= this.depth / 2);
     }
-
-
 }

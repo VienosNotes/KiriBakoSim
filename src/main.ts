@@ -7,6 +7,12 @@ import {BoxKb} from "./models/BoxKb.ts";
 import {Droplet} from "./models/droplet.ts";
 import {Muon} from "./models/ChargedParticle.ts";
 
+// 1秒間にミューオンが飛来する平均回数
+const muonRatePerSec = 3;
+const bgRatePerSec = 200;
+
+
+// 荷電粒子の1ステップの距離
 const sd = 0.001; // meter
 
 const kb = new BoxKb(2, 0.5, 2);
@@ -40,7 +46,7 @@ const controls = new OrbitControls(camera, renderer.domElement);
 
 const dropsBuffer = new BufferGeometry();
 dropsBuffer.setAttribute("position", new THREE.BufferAttribute(verticesBuffer, 3));
-const dropsMaterial = new PointsMaterial({color: "white", size: 0.01});
+const dropsMaterial = new PointsMaterial({color: "white", size: 0.001});
 const dropsMesh = new THREE.Points(dropsBuffer, dropsMaterial);
 scene.add(dropsMesh);
 
@@ -48,7 +54,9 @@ renderer.setAnimationLoop(update);
 
 function update(time: number)
 {
+    const dt = time - lastUpdated;
     controls.update();
+    procRandomEvents(dt);
     updateDrops(time);
     renderer.render(scene, camera);
     lastUpdated = time;
@@ -147,4 +155,13 @@ function updateDrops(time: number) {
 function next(drop: Droplet, now: number) : Vector3 | undefined {
     if (drop.expiredAt < now) { return undefined; }
     return drop.position.add(new Vector3(0, -drop.fallSpeed * (drop.fallSpeed * (now - lastUpdated) / 1000), 0));
+}
+
+function procRandomEvents(dt: number) {
+
+    // Muon
+    const n = rand.poisson(muonRatePerSec * (dt/1000));
+    for (let i = 0; i < n; i++) {
+        castRandomMuon();
+    }
 }

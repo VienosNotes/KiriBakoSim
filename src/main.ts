@@ -125,9 +125,9 @@ function castRandomMuon() {
         created.forEach(d => droplets.push(new Droplet(d, bufIdx++, dropSize, now, now + rand.normalIn(0, 2000))));
     }
 
-    const geometry = new THREE.BufferGeometry().setFromPoints([p1,p2]);
-    const material = new LineBasicMaterial({color: "orange"});
-    const line = new THREE.Line(geometry, material);
+    // const geometry = new THREE.BufferGeometry().setFromPoints([p1,p2]);
+    // const material = new LineBasicMaterial({color: "orange"});
+    // const line = new THREE.Line(geometry, material);
 
 //    lines.push(line);
 //    scene.add(line);

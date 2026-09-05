@@ -69,6 +69,17 @@ export class KbRand {
     }
 
     /**
+     * 指定された範囲にだいたい収まる正規乱数をひとつ取得します。
+     * @param min 乱数の最小値。
+     * @param max 乱数の最大値。
+     */
+    public normalIn(min: number, max: number) {
+        const mean = (min + max) / 2;
+        const sigma = (max - min) / 6;
+        return mean + this.normal() * sigma;
+    }
+
+    /**
      * ポアソン分布から発生回数を返します。
      * @param lambda 平均発生回数。
      */

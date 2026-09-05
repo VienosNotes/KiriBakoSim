@@ -1,6 +1,6 @@
 import './style.css';
 import * as THREE from 'three';
-import {LineBasicMaterial, PointsMaterial, Vector3} from 'three';
+import {BufferGeometry, LineBasicMaterial, PointsMaterial, Vector3} from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {KbRand} from './utils/KbRand';
 import {BoxKb} from "./models/BoxKb.ts";
@@ -11,8 +11,10 @@ const sd = 0.001; // meter
 
 const kb = new BoxKb(2, 0.5, 2);
 
+const maxDrops = 100000;
 const lines: THREE.Line[] = [];
-const droplets: Droplet[] = [];
+let droplets: Droplet[] = [];
+let verticesBuffer: Float32Array = new Float32Array(maxDrops * 3);
 
 const rand = new KbRand();
 initControls();
@@ -35,11 +37,18 @@ scene.add(light);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 
+const dropsBuffer = new BufferGeometry();
+dropsBuffer.setAttribute("position", new THREE.BufferAttribute(verticesBuffer, 3));
+const dropsMaterial = new PointsMaterial({color: "white", size: 0.01});
+const dropsMesh = new THREE.Points(dropsBuffer, dropsMaterial);
+scene.add(dropsMesh);
+
 renderer.setAnimationLoop(update);
 
 function update()
 {
     controls.update();
+    updateDrops();
     renderer.render(scene, camera);
 }
 
@@ -87,6 +96,7 @@ function castRandomMuon() {
     const particle = new Muon(direction, 1, p1, rand);
 
     const current = p1.clone();
+    const now = Date.now();
 
     while(p2.clone().sub(current).dot(direction) > 0)
     {
@@ -94,28 +104,45 @@ function castRandomMuon() {
         particle.position = current;
         const sensitivity = kb.getLocalSensitivity(current);
         const created = particle.sampleDroplets(sensitivity, sd).filter(d => kb.contains(d));
-        created.forEach(d => droplets.push(new Droplet(d, bufIdx++)));
+        created.forEach(d => droplets.push(new Droplet(d, bufIdx++, now, now + rand.normalIn(500, 2000))));
     }
 
     const geometry = new THREE.BufferGeometry().setFromPoints([p1,p2]);
     const material = new LineBasicMaterial({color: "orange"});
     const line = new THREE.Line(geometry, material);
 
-    const dgeo = new THREE.BufferGeometry().setFromPoints(droplets.map(d => d.position));
-    const dmaterial = new PointsMaterial({color: "white", size: 0.01});
-    const drops = new THREE.Points(dgeo, dmaterial);
-
-    lines.push(line);
-    scene.add(line);
-
-    scene.add(drops);
-}
-
-function putDroplet(particlePos: Vector3) {
-
+//    lines.push(line);
+//    scene.add(line);
 }
 
 function clearLines(): void {
     lines.forEach(l => scene.remove(l));
     lines.splice(0);
+}
+
+function updateDrops() {
+    const now = Date.now();
+    const attr = dropsBuffer.getAttribute("position") as THREE.BufferAttribute;
+    let i = 0;
+    const nextDrops: Droplet[] = [];
+    droplets.forEach(d => {
+        const nv = next(d, now);
+        if (nv === undefined) {
+            return;
+        }
+        d.bufferIndex = i;
+        d.position = nv;
+        nextDrops.push(d);
+        attr.setXYZ(i, nv.x, nv.y, nv.z);
+        i++;
+    });
+
+    dropsBuffer.setDrawRange(0, i);
+    attr.needsUpdate = true;
+    droplets = nextDrops;
+}
+
+function next(drop: Droplet, now: number) : Vector3 | undefined {
+    if (drop.expiredAt < now) { return undefined; }
+    return drop.position;
 }

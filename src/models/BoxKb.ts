@@ -1,4 +1,5 @@
 ﻿import {Vector3} from "three";
+import {smoothstep} from "three/src/math/MathUtils.js";
 
 export class BoxKb {
     public width: number;
@@ -17,7 +18,15 @@ export class BoxKb {
         if (!this.contains(position)) {
             return 0;
         }
-        return 0.5;
+
+        const y = (position.y + (this.height /2)) / this.height;
+        return this.sensitivityCurve(y);
+    }
+
+    private sensitivityCurve(y: number): number {
+        const lower = smoothstep(y, 0.1, 0.3);
+        const upper = 1 - smoothstep(y, 0.4, 0.6);
+        return lower * upper;
     }
 
     /**
@@ -29,4 +38,6 @@ export class BoxKb {
             Math.abs(position.y) >= this.height / 2 ||
             Math.abs(position.z) >= this.depth / 2);
     }
+
+
 }

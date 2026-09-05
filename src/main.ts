@@ -6,10 +6,17 @@ import {KbRand} from './utils/KbRand';
 import {BoxKb} from "./models/BoxKb.ts";
 import {Droplet} from "./models/droplet.ts";
 import {Muon} from "./models/ChargedParticle.ts";
+import {boltzmann} from "./utils/utils.ts";
 
 // 1秒間にミューオンが飛来する平均回数
 const muonRatePerSec = 3;
+// 1秒間に背景水滴を生成する平均回数
 const bgRatePerSec = 200;
+
+// ブラウン運動を誇張する倍率
+const brownSigmaMultiplier = 40
+// 落下速度を誇張する倍率
+const fallSpeedMultiplier = 1;
 
 
 // 荷電粒子の1ステップの距離
@@ -114,7 +121,8 @@ function castRandomMuon() {
         particle.position = current;
         const sensitivity = kb.getLocalSensitivity(current);
         const created = particle.sampleDroplets(sensitivity, sd).filter(d => kb.contains(d));
-        created.forEach(d => droplets.push(new Droplet(d, bufIdx++, now, now + rand.normalIn(0, 2000))));
+        const dropSize = rand.logNormal(2e-5);
+        created.forEach(d => droplets.push(new Droplet(d, bufIdx++, dropSize, now, now + rand.normalIn(0, 2000))));
     }
 
     const geometry = new THREE.BufferGeometry().setFromPoints([p1,p2]);
@@ -152,9 +160,21 @@ function updateDrops(time: number) {
     droplets = nextDrops;
 }
 
+
+
 function next(drop: Droplet, now: number) : Vector3 | undefined {
     if (drop.expiredAt < now) { return undefined; }
-    return drop.position.add(new Vector3(0, -drop.fallSpeed * (drop.fallSpeed * (now - lastUpdated) / 1000), 0));
+
+    const dt = now - lastUpdated;
+    // 終端速度で沈降
+    const fell = drop.position.add(new Vector3(0, -(drop.fallSpeed * fallSpeedMultiplier * dt / 1000), 0));
+
+    // ブラウン運動
+    const d = (boltzmann * kb.temperature) / (6 * Math.PI * kb.viscosity * drop.radius);
+    const brownSigma = Math.sqrt(2 * d * dt) * brownSigmaMultiplier;
+    const next = fell.add(new Vector3(rand.normal() * brownSigma, rand.normal() * brownSigma, rand.normal() * brownSigma));
+
+    return kb.contains(next) ? next : undefined;
 }
 
 function procRandomEvents(dt: number) {

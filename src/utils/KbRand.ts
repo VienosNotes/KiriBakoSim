@@ -110,4 +110,9 @@ export class KbRand {
             z
         );
     }
+
+    public logNormal(median: number, sigma: number = 0.05) {
+        const mu = Math.log(median);
+        return Math.exp(mu + sigma * this.normal());
+    }
 }

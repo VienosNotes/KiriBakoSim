@@ -6,12 +6,16 @@ export class BoxKb {
     public height: number;
     public depth: number;
     public norm: number;
+    public temperature: number;
+    public readonly viscosity: number;
 
-    constructor(width: number, height: number, depth: number) {
+    constructor(width: number, height: number, depth: number, temperature = 200) {
         this.width = width;
         this.height = height;
         this.depth = depth;
         this.norm = new Vector3(width, height, depth).length();
+        this.temperature = temperature;
+        this.viscosity = (1.4592 * 10e-6 * Math.pow(this.temperature, 3/2)) / (109.10 + this.temperature);
     }
 
     public getLocalSensitivity(position: Vector3): number {

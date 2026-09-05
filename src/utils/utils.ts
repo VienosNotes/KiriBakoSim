@@ -5,3 +5,6 @@
 export function toRad(degree: number) : number {
     return (degree / 360) * (2 * Math.PI);
 }
+
+
+export const boltzmann: number = 1.380649 * 10e-23;

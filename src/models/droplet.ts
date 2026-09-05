@@ -1,6 +1,6 @@
 ﻿import type {Vector3} from "three";
 
-class Droplet {
+export class Droplet {
     public position: Vector3;
     public bufferIndex: number;
 

@@ -8,10 +8,11 @@ import {Droplet} from "./models/droplet.ts";
 import {Muon} from "./models/ChargedParticle.ts";
 import {boltzmann} from "./utils/utils.ts";
 
+
 // 1秒間にミューオンが飛来する平均回数
 const muonRatePerSec = 2.5;
 // 1秒間に背景水滴を生成する平均回数
-const bgRatePerSec = 1000;
+const bgRatePerSec = 500;
 
 // ブラウン運動を誇張する倍率
 const brownSigmaMultiplier = 50
@@ -25,7 +26,7 @@ const sd = 0.001; // meter
 const kb = new BoxKb(2, 0.5, 2);
 
 const maxDrops = 100000;
-const lines: THREE.Line[] = [];
+//const lines: THREE.Line[] = [];
 let droplets: Droplet[] = [];
 let verticesBuffer: Float32Array = new Float32Array(maxDrops * 3);
 let lastUpdated = 0;
@@ -65,6 +66,10 @@ const dropsMaterial = new THREE.PointsMaterial({
 const dropsMesh = new THREE.Points(dropsBuffer, dropsMaterial);
 scene.add(dropsMesh);
 
+
+
+window.addEventListener("resize", resize);
+resize();
 renderer.setAnimationLoop(update);
 
 function update(time: number)
@@ -102,11 +107,10 @@ function getRandomPointInKb(width : number, height : number, depth: number) {
 
 function initControls()
 {
-    const rMuon = (document.querySelector('#rand-muon') as HTMLButtonElement)!;
-    rMuon.addEventListener('click', () => castRandomMuon());
-    const clearLinesButton = (document.querySelector('#clear-lines') as HTMLButtonElement)!;
-    clearLinesButton.addEventListener('click', () => clearLines());
-
+    // const rMuon = (document.querySelector('#rand-muon') as HTMLButtonElement)!;
+    // rMuon.addEventListener('click', () => castRandomMuon());
+    // const clearLinesButton = (document.querySelector('#clear-lines') as HTMLButtonElement)!;
+    // clearLinesButton.addEventListener('click', () => clearLines());
 }
 
 function castRandomMuon() {
@@ -141,10 +145,10 @@ function castRandomMuon() {
 //    scene.add(line);
 }
 
-function clearLines(): void {
-    lines.forEach(l => scene.remove(l));
-    lines.splice(0);
-}
+// function clearLines(): void {
+//     lines.forEach(l => scene.remove(l));
+//     lines.splice(0);
+// }
 
 function updateDrops(time: number) {
     const now = time
@@ -229,3 +233,14 @@ function createGlowTexture() {
 
     return new THREE.CanvasTexture(canvas);
 }
+
+function resize() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    renderer.setSize(width, height);
+
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+}
+

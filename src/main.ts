@@ -9,12 +9,12 @@ import {Muon} from "./models/ChargedParticle.ts";
 import {boltzmann} from "./utils/utils.ts";
 
 // 1秒間にミューオンが飛来する平均回数
-const muonRatePerSec = 3;
+const muonRatePerSec = 2.5;
 // 1秒間に背景水滴を生成する平均回数
-const bgRatePerSec = 200;
+const bgRatePerSec = 1000;
 
 // ブラウン運動を誇張する倍率
-const brownSigmaMultiplier = 40
+const brownSigmaMultiplier = 50
 // 落下速度を誇張する倍率
 const fallSpeedMultiplier = 1;
 
@@ -63,7 +63,7 @@ function update(time: number)
 {
     const dt = time - lastUpdated;
     controls.update();
-    procRandomEvents(dt);
+    procRandomEvents(time, dt);
     updateDrops(time);
     renderer.render(scene, camera);
     lastUpdated = time;
@@ -177,11 +177,25 @@ function next(drop: Droplet, now: number) : Vector3 | undefined {
     return kb.contains(next) ? next : undefined;
 }
 
-function procRandomEvents(dt: number) {
+function procRandomEvents(now: number, dt: number) {
 
     // Muon
     const n = rand.poisson(muonRatePerSec * (dt/1000));
     for (let i = 0; i < n; i++) {
         castRandomMuon();
+    }
+
+    // background drops
+
+    const bgn = rand.poisson(bgRatePerSec * (dt/1000));
+    for (let i = 0; i < bgn; i++) {
+        const pos = new Vector3(
+            rand.uniformIn(-kb.width/2, kb.width/2),
+            rand.uniformIn(kb.bgDropsBaseHeightLower, kb.bgDropsBaseHeightUpper),
+            rand.uniformIn(-kb.depth/2, kb.depth/2),
+        )
+        const dropSize = rand.logNormal(2e-5);
+        const bg = new Droplet(pos, droplets.length, dropSize, now, now + rand.normalIn(500, 2500));
+        droplets.push(bg);
     }
 }

@@ -50,7 +50,7 @@ export class KbRand {
      */
     public uniformIn(min: number, max: number) {
         const width = max - min;
-        return (this.uniform() * width) - (width / 2);
+        return min + (this.uniform() * width);
     }
 
     private unibuf_len: number = 0;

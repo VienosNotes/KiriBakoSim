@@ -8,6 +8,9 @@ export class BoxKb {
     public norm: number;
     public temperature: number;
     public readonly viscosity: number;
+    public bgDropsBaseHeightUpper : number;
+    public bgDropsBaseHeightLower : number;
+
 
     constructor(width: number, height: number, depth: number, temperature = 200) {
         this.width = width;
@@ -16,6 +19,11 @@ export class BoxKb {
         this.norm = new Vector3(width, height, depth).length();
         this.temperature = temperature;
         this.viscosity = (1.4592 * 10e-6 * Math.pow(this.temperature, 3/2)) / (109.10 + this.temperature);
+
+        this.bgDropsBaseHeightUpper = (height * 0.25) - (height/2);
+        this.bgDropsBaseHeightLower = -(height/2);
+
+        console.log(`upper = ${this.bgDropsBaseHeightUpper}, lower = ${this.bgDropsBaseHeightLower}`);
     }
 
     public getLocalSensitivity(position: Vector3): number {
@@ -27,9 +35,9 @@ export class BoxKb {
         return this.sensitivityCurve(y);
     }
 
-    private sensitivityCurve(y: number): number {
-        const lower = smoothstep(y, 0.1, 0.3);
-        const upper = 1 - smoothstep(y, 0.4, 0.6);
+    private sensitivityCurve(x: number): number {
+        const lower = smoothstep(x, 0.1, 0.3);
+        const upper = 1 - smoothstep(x, 0.4, 0.6);
         return lower * upper;
     }
 

@@ -42,7 +42,7 @@ let usingMaterial: ShaderMaterial | undefined;
 const rand = new KbRand();
 const canvas = document.querySelector('#c')!;
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000 );
-camera.position.set(-0.9, 1.5, 1.1);
+camera.position.set(-0.8, 1.4, 1.0);
 
 const renderer = new THREE.WebGLRenderer({antialias: true, canvas});
 renderer.setSize( window.innerWidth, window.innerHeight );

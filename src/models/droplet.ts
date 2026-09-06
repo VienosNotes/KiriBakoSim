@@ -7,6 +7,7 @@ export class Droplet {
     public createdAt: number;
     public expiredAt: number;
     public fallSpeed: number;
+    public deathMarked: boolean = false;
 
     constructor(position: Vector3, bufferIndex: number, radius: number, createdAt: number, expiredAt: number) {
         this.position = position;

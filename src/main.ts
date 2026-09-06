@@ -1,13 +1,13 @@
 import './style.css';
 import * as THREE from 'three';
-import {BufferGeometry, Vector3} from 'three';
+import {BufferGeometry, type ShaderMaterial, Vector3} from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {KbRand} from './utils/KbRand';
 import {BoxKb} from "./models/BoxKb.ts";
 import {Droplet} from "./models/droplet.ts";
 import {Muon} from "./models/ChargedParticle.ts";
 import {boltzmann} from "./utils/utils.ts";
-import {createDropletShader} from "./shaders/DropletMaterial.ts";
+import {createEnhancedMaterial, createPixelMaterial} from "./shaders/DropletMaterial.ts";
 
 
 // 1秒間にミューオンが飛来する平均回数
@@ -29,15 +29,19 @@ const kb = new BoxKb(2, 0.5, 2);
 const maxDrops = 100000;
 //const lines: THREE.Line[] = [];
 let droplets: Droplet[] = [];
+
 let verticesBuffer: Float32Array = new Float32Array(maxDrops * 3);
+let deathBuffer: Float32Array = new Float32Array(maxDrops);
+let bornBuffer: Float32Array = new Float32Array(maxDrops);
 let lastUpdated = 0;
 
 let usingMesh: THREE.Points;
+let usingMaterial: ShaderMaterial | undefined;
 
 const rand = new KbRand();
 const canvas = document.querySelector('#c')!;
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000 );
-camera.position.set(-0.62, 1.67, 0.97);
+camera.position.set(-0.9, 1.5, 1.1);
 
 const renderer = new THREE.WebGLRenderer({antialias: true, canvas});
 renderer.setSize( window.innerWidth, window.innerHeight );
@@ -54,6 +58,8 @@ const controls = new OrbitControls(camera, renderer.domElement);
 
 const dropsBuffer = new BufferGeometry();
 dropsBuffer.setAttribute("position", new THREE.BufferAttribute(verticesBuffer, 3));
+dropsBuffer.setAttribute("expiredAt", new THREE.BufferAttribute(deathBuffer, 1));
+dropsBuffer.setAttribute("createdAt", new THREE.BufferAttribute(bornBuffer, 1));
 
 initControls();
 
@@ -66,7 +72,7 @@ function update(time: number)
     const dt = time - lastUpdated;
     controls.update();
     procRandomEvents(time, dt);
-    updateDrops(time);
+    updateDrops(time, dt);
     renderer.render(scene, camera);
     lastUpdated = time;
 }
@@ -110,6 +116,7 @@ function initControls()
 }
 
 function switchShader(name: string) {
+    dump();
     scene.remove(usingMesh);
     if (name == "Default") {
         const glowTexture = createGlowTexture();
@@ -120,16 +127,24 @@ function switchShader(name: string) {
             blending: THREE.AdditiveBlending,
             map: glowTexture,
         });
+        usingMaterial = undefined;
         usingMesh = new THREE.Points(dropsBuffer, dropsMaterial);
     } else if (name == "Pixel") {
-        const shaderMaterial = createDropletShader();
-        usingMesh = new THREE.Points(dropsBuffer, shaderMaterial);
+        usingMaterial = createPixelMaterial();
+        usingMesh = new THREE.Points(dropsBuffer, usingMaterial);
+    } else if (name == "Enhanced") {
+        usingMaterial= createEnhancedMaterial();
+        usingMesh = new THREE.Points(dropsBuffer, usingMaterial);
     }
-
     scene.add(usingMesh);
 }
 
-function castRandomMuon() {
+function dump() {
+    console.log(`camera pos:`);
+    console.log(camera);
+}
+
+function castRandomMuon(time: number) {
     let bufIdx = droplets.length;
     //console.log("muon! " + bufIdx + " droplets");
 
@@ -150,7 +165,7 @@ function castRandomMuon() {
         const sensitivity = kb.getLocalSensitivity(current);
         const created = particle.sampleDroplets(sensitivity, sd).filter(d => kb.contains(d));
         const dropSize = rand.logNormal(2e-5);
-        created.forEach(d => droplets.push(new Droplet(d, bufIdx++, dropSize, now, now + rand.normalIn(0, 2000))));
+        created.forEach(d => droplets.push(new Droplet(d, bufIdx++, dropSize, time, time + rand.normalIn(0, 2000))));
     }
 
     // const geometry = new THREE.BufferGeometry().setFromPoints([p1,p2]);
@@ -166,32 +181,47 @@ function castRandomMuon() {
 //     lines.splice(0);
 // }
 
-function updateDrops(time: number) {
-    const now = time
-    const attr = dropsBuffer.getAttribute("position") as THREE.BufferAttribute;
+function updateDrops(time: number, dt: number) {
+    const now = time;
+    if (usingMaterial !== undefined) {
+        usingMaterial.uniforms.time.value = time;
+    }
+    const posAttr = dropsBuffer.getAttribute("position") as THREE.BufferAttribute;
+    const expiredAttr = dropsBuffer.getAttribute("expiredAt") as THREE.BufferAttribute;
+    const createdAttr = dropsBuffer.getAttribute("createdAt") as THREE.BufferAttribute;
     let i = 0;
     const nextDrops: Droplet[] = [];
+
     droplets.forEach(d => {
-        const nv = next(d, now);
-        if (nv === undefined) {
+        if (time > d.expiredAt) {
             return;
         }
+
+        let nv = next(d, now);
+
+        if (!kb.contains(nv) && !d.deathMarked) {
+            // 移動先が外にはみ出たら200msで死ぬように寿命を縮める
+            d.expiredAt = time + 200;
+            d.deathMarked = true;
+        }
+
         d.bufferIndex = i;
         d.position = nv;
         nextDrops.push(d);
-        attr.setXYZ(i, nv.x, nv.y, nv.z);
+        posAttr.setXYZ(i, nv.x, nv.y, nv.z);
+        createdAttr.setX(i, d.createdAt);
+        expiredAttr.setX(i, d.expiredAt);
         i++;
     });
 
     dropsBuffer.setDrawRange(0, i);
-    attr.needsUpdate = true;
+    posAttr.needsUpdate = true;
+    createdAttr.needsUpdate = true;
+    expiredAttr.needsUpdate = true;
     droplets = nextDrops;
 }
 
-
-
-function next(drop: Droplet, now: number) : Vector3 | undefined {
-    if (drop.expiredAt < now) { return undefined; }
+function next(drop: Droplet, now: number) : Vector3 {
 
     const dt = now - lastUpdated;
     // 終端速度で沈降
@@ -202,7 +232,8 @@ function next(drop: Droplet, now: number) : Vector3 | undefined {
     const brownSigma = Math.sqrt(2 * d * dt) * brownSigmaMultiplier;
     const next = fell.add(new Vector3(rand.normal() * brownSigma, rand.normal() * brownSigma, rand.normal() * brownSigma));
 
-    return kb.contains(next) ? next : undefined;
+    return next;
+
 }
 
 function procRandomEvents(now: number, dt: number) {
@@ -210,7 +241,7 @@ function procRandomEvents(now: number, dt: number) {
     // Muon
     const n = rand.poisson(muonRatePerSec * (dt/1000));
     for (let i = 0; i < n; i++) {
-        castRandomMuon();
+        castRandomMuon(now);
     }
 
     // background drops

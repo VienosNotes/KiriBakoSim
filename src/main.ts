@@ -7,6 +7,7 @@ import {BoxKb} from "./models/BoxKb.ts";
 import {Droplet} from "./models/droplet.ts";
 import {Muon} from "./models/ChargedParticle.ts";
 import {boltzmann} from "./utils/utils.ts";
+import {createDropletShader} from "./shaders/DropletMaterial.ts";
 
 
 // 1秒間にミューオンが飛来する平均回数
@@ -31,13 +32,12 @@ let droplets: Droplet[] = [];
 let verticesBuffer: Float32Array = new Float32Array(maxDrops * 3);
 let lastUpdated = 0;
 
-const rand = new KbRand();
-initControls();
-const canvas = document.querySelector('#c')!;
+let usingMesh: THREE.Points;
 
+const rand = new KbRand();
+const canvas = document.querySelector('#c')!;
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000 );
-camera.position.z = 2;
-camera.position.set(-0.52, 1.67, 0.97);
+camera.position.set(-0.62, 1.67, 0.97);
 
 const renderer = new THREE.WebGLRenderer({antialias: true, canvas});
 renderer.setSize( window.innerWidth, window.innerHeight );
@@ -45,7 +45,7 @@ renderer.setSize( window.innerWidth, window.innerHeight );
 const scene = new THREE.Scene();
 
 const frame = buildKiribako();
-scene.add(frame);
+//scene.add(frame);
 
 const light = buildLight();
 scene.add(light);
@@ -54,19 +54,8 @@ const controls = new OrbitControls(camera, renderer.domElement);
 
 const dropsBuffer = new BufferGeometry();
 dropsBuffer.setAttribute("position", new THREE.BufferAttribute(verticesBuffer, 3));
-//const dropsMaterial = new PointsMaterial({color: "white", size: 0.001});
-const glowTexture = createGlowTexture();
-const dropsMaterial = new THREE.PointsMaterial({
-    size: 0.04,
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-    map: glowTexture,
-});
-const dropsMesh = new THREE.Points(dropsBuffer, dropsMaterial);
-scene.add(dropsMesh);
 
-
+initControls();
 
 window.addEventListener("resize", resize);
 resize();
@@ -111,11 +100,38 @@ function initControls()
     // rMuon.addEventListener('click', () => castRandomMuon());
     // const clearLinesButton = (document.querySelector('#clear-lines') as HTMLButtonElement)!;
     // clearLinesButton.addEventListener('click', () => clearLines());
+
+    const shaderSelector = document.querySelector('#shader-selector')! as HTMLSelectElement;
+
+    shaderSelector.addEventListener("change", e => {
+        switchShader(shaderSelector.value);
+    });
+    switchShader(shaderSelector.value);
+}
+
+function switchShader(name: string) {
+    scene.remove(usingMesh);
+    if (name == "Default") {
+        const glowTexture = createGlowTexture();
+        const dropsMaterial = new THREE.PointsMaterial({
+            size: 0.04,
+            transparent: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+            map: glowTexture,
+        });
+        usingMesh = new THREE.Points(dropsBuffer, dropsMaterial);
+    } else if (name == "Pixel") {
+        const shaderMaterial = createDropletShader();
+        usingMesh = new THREE.Points(dropsBuffer, shaderMaterial);
+    }
+
+    scene.add(usingMesh);
 }
 
 function castRandomMuon() {
     let bufIdx = droplets.length;
-    console.log("muon! " + bufIdx + " droplets");
+    //console.log("muon! " + bufIdx + " droplets");
 
     const point = getRandomPointInKb(kb.width, kb.height, kb.depth);
     const direction = rand.randomDirection();

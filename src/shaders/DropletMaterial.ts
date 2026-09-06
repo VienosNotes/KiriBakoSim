@@ -24,7 +24,7 @@ export function createEnhancedMaterial() : ShaderMaterial {
         uniforms: {
             time: {value: 0.0},
             fadeoutDuration: { value: 1000 },
-            fadeinDuration: { value: 100 }
+            fadeinDuration: { value: 200 }
         }
     });
 }

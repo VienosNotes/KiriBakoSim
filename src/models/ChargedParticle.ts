@@ -15,7 +15,7 @@ export class Muon implements ChargedParticle {
     public position: Vector3;
     private rand: KbRand;
 
-    private readonly dropsPerUnitDistance = 500;
+    private readonly dropsPerUnitDistance = 400;
     private readonly dropsDistanceSigma = 0.01;
 
     constructor(direction: Vector3, kineticEnergy: number, position: Vector3, rand: KbRand) {

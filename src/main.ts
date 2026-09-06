@@ -33,6 +33,7 @@ let droplets: Droplet[] = [];
 let verticesBuffer: Float32Array = new Float32Array(maxDrops * 3);
 let deathBuffer: Float32Array = new Float32Array(maxDrops);
 let bornBuffer: Float32Array = new Float32Array(maxDrops);
+let dropSizeBuffer:  Float32Array = new Float32Array(maxDrops);
 let lastUpdated = 0;
 
 let usingMesh: THREE.Points;
@@ -60,6 +61,7 @@ const dropsBuffer = new BufferGeometry();
 dropsBuffer.setAttribute("position", new THREE.BufferAttribute(verticesBuffer, 3));
 dropsBuffer.setAttribute("expiredAt", new THREE.BufferAttribute(deathBuffer, 1));
 dropsBuffer.setAttribute("createdAt", new THREE.BufferAttribute(bornBuffer, 1));
+dropsBuffer.setAttribute("dropSize", new THREE.BufferAttribute(dropSizeBuffer, 1));
 
 initControls();
 
@@ -102,11 +104,6 @@ function getRandomPointInKb(width : number, height : number, depth: number) {
 
 function initControls()
 {
-    // const rMuon = (document.querySelector('#rand-muon') as HTMLButtonElement)!;
-    // rMuon.addEventListener('click', () => castRandomMuon());
-    // const clearLinesButton = (document.querySelector('#clear-lines') as HTMLButtonElement)!;
-    // clearLinesButton.addEventListener('click', () => clearLines());
-
     const shaderSelector = document.querySelector('#shader-selector')! as HTMLSelectElement;
 
     shaderSelector.addEventListener("change", e => {
@@ -165,7 +162,7 @@ function castRandomMuon(time: number) {
         const sensitivity = kb.getLocalSensitivity(current);
         const created = particle.sampleDroplets(sensitivity, sd).filter(d => kb.contains(d));
         const dropSize = rand.logNormal(2e-5);
-        created.forEach(d => droplets.push(new Droplet(d, bufIdx++, dropSize, time, time + rand.normalIn(0, 2000))));
+        created.forEach(d => droplets.push(new Droplet(d, bufIdx++, dropSize, time, time + rand.normalIn(0, 3000))));
     }
 
     // const geometry = new THREE.BufferGeometry().setFromPoints([p1,p2]);
@@ -189,6 +186,7 @@ function updateDrops(time: number, dt: number) {
     const posAttr = dropsBuffer.getAttribute("position") as THREE.BufferAttribute;
     const expiredAttr = dropsBuffer.getAttribute("expiredAt") as THREE.BufferAttribute;
     const createdAttr = dropsBuffer.getAttribute("createdAt") as THREE.BufferAttribute;
+    const dropSizeAttr = dropsBuffer.getAttribute("dropSize") as THREE.BufferAttribute;
     let i = 0;
     const nextDrops: Droplet[] = [];
 
@@ -211,6 +209,7 @@ function updateDrops(time: number, dt: number) {
         posAttr.setXYZ(i, nv.x, nv.y, nv.z);
         createdAttr.setX(i, d.createdAt);
         expiredAttr.setX(i, d.expiredAt);
+        dropSizeAttr.setX(i, d.radius);
         i++;
     });
 
@@ -218,6 +217,7 @@ function updateDrops(time: number, dt: number) {
     posAttr.needsUpdate = true;
     createdAttr.needsUpdate = true;
     expiredAttr.needsUpdate = true;
+    dropSizeAttr.needsUpdate = true;
     droplets = nextDrops;
 }
 

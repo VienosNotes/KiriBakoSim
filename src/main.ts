@@ -69,6 +69,8 @@ window.addEventListener("resize", resize);
 resize();
 renderer.setAnimationLoop(update);
 
+let reserved: number = 0;
+
 function update(time: number)
 {
     const dt = time - lastUpdated;
@@ -110,6 +112,9 @@ function initControls()
         switchShader(shaderSelector.value);
     });
     switchShader(shaderSelector.value);
+
+    const title = document.querySelector('#top-panel')! as HTMLDivElement;
+    title.addEventListener('click', () => reserved++);
 }
 
 function switchShader(name: string) {
@@ -239,7 +244,8 @@ function next(drop: Droplet, now: number) : Vector3 {
 function procRandomEvents(now: number, dt: number) {
 
     // Muon
-    const n = rand.poisson(muonRatePerSec * (dt/1000));
+    const n = rand.poisson(muonRatePerSec * (dt/1000)) + reserved;
+    reserved = 0;
     for (let i = 0; i < n; i++) {
         castRandomMuon(now);
     }

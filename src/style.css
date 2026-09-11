@@ -25,8 +25,41 @@ canvas {
 }
 
 #op-panel {
-    display: none;
+    #display: none;
     position: absolute;
     left: 20px;
     bottom: 20px;
+}
+
+#dev-tag {
+    color: darkorange;
+}
+
+.invisible {
+    display: none;
+}
+
+select {
+    padding: 1px 5px 3px 5px;
+
+    border: 1px solid #fff;
+    border-radius: 0;
+
+    background: transparent;
+    color: #fff;
+
+    font-family: "Orbitron", sans-serif;
+    font-size: 14px;
+
+    outline: none;
+    cursor: pointer;
+}
+
+select:focus {
+    border-color: #fff;
+}
+
+select option {
+    background: #000;
+    color: #fff;
 }

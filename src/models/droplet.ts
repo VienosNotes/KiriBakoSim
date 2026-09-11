@@ -8,13 +8,15 @@ export class Droplet {
     public expiredAt: number;
     public fallSpeed: number;
     public deathMarked: boolean = false;
+    public sourceId : number = 0;
 
-    constructor(position: Vector3, bufferIndex: number, radius: number, createdAt: number, expiredAt: number) {
+    constructor(position: Vector3, bufferIndex: number, radius: number, createdAt: number, expiredAt: number, sourceId: number) {
         this.position = position;
         this.bufferIndex = bufferIndex;
         this.radius = radius;
         this.createdAt = createdAt;
         this.expiredAt = expiredAt;
         this.fallSpeed = 1.21 * 100000000 * radius * radius;
+        this.sourceId = sourceId;
     }
 }

@@ -1,4 +1,7 @@
 varying float vOpacity;
+varying float vRed;
+varying float vGreen;
+varying float vBlue;
 
 void main() {
 
@@ -14,5 +17,5 @@ float radialAlpha =
     core * 0.8 + halo * 0.08;
 
 gl_FragColor =
-    vec4(1.0, 1.0, 1.0, vOpacity * radialAlpha);
+    vec4(vRed, vGreen, vBlue, vOpacity * radialAlpha);
 }

@@ -7,11 +7,15 @@ import {BoxKb} from "./models/BoxKb.ts";
 import {Droplet} from "./models/droplet.ts";
 import {Muon} from "./models/ChargedParticle.ts";
 import {boltzmann} from "./utils/utils.ts";
-import {createEnhancedMaterial, createPixelMaterial} from "./shaders/DropletMaterial.ts";
+import {createEnhancedMaterial, createPixelMaterial, createDopaMaterial} from "./shaders/DropletMaterial.ts";
+import {initDev} from "./devconf.ts";
 
+initDev();
 
+let muonRateScale = 1.0;
 // 1秒間にミューオンが飛来する平均回数
 const muonRatePerSec = 2.5;
+let bgRateScale = 1.0;
 // 1秒間に背景水滴を生成する平均回数
 const bgRatePerSec = 500;
 
@@ -34,6 +38,8 @@ let verticesBuffer: Float32Array = new Float32Array(maxDrops * 3);
 let deathBuffer: Float32Array = new Float32Array(maxDrops);
 let bornBuffer: Float32Array = new Float32Array(maxDrops);
 let dropSizeBuffer:  Float32Array = new Float32Array(maxDrops);
+let sourceIdBuffer: Float32Array = new Float32Array(maxDrops);
+
 let lastUpdated = 0;
 
 let usingMesh: THREE.Points;
@@ -62,6 +68,7 @@ dropsBuffer.setAttribute("position", new THREE.BufferAttribute(verticesBuffer, 3
 dropsBuffer.setAttribute("expiredAt", new THREE.BufferAttribute(deathBuffer, 1));
 dropsBuffer.setAttribute("createdAt", new THREE.BufferAttribute(bornBuffer, 1));
 dropsBuffer.setAttribute("dropSize", new THREE.BufferAttribute(dropSizeBuffer, 1));
+dropsBuffer.setAttribute("sourceId", new THREE.BufferAttribute(sourceIdBuffer, 1));
 
 initControls();
 
@@ -108,6 +115,18 @@ function initControls()
 {
     const shaderSelector = document.querySelector('#shader-selector')! as HTMLSelectElement;
 
+    const params = new URLSearchParams(window.location.search);
+    const shaderQuery = params.get("shader");
+
+    if (shaderSelector && shaderQuery) {
+        const exists = Array.from(shaderSelector.options)
+            .some(option => option.value === shaderQuery);
+
+        if (exists) {
+            shaderSelector.value = shaderQuery;
+        }
+    }
+
     shaderSelector.addEventListener("change", e => {
         switchShader(shaderSelector.value);
     });
@@ -119,8 +138,10 @@ function initControls()
 
 function switchShader(name: string) {
     dump();
+    muonRateScale = 1.0;
+    bgRateScale = 1.0;
     scene.remove(usingMesh);
-    if (name == "Default") {
+    if (name == "Simple") {
         const glowTexture = createGlowTexture();
         const dropsMaterial = new THREE.PointsMaterial({
             size: 0.04,
@@ -134,9 +155,14 @@ function switchShader(name: string) {
     } else if (name == "Pixel") {
         usingMaterial = createPixelMaterial();
         usingMesh = new THREE.Points(dropsBuffer, usingMaterial);
-    } else if (name == "Enhanced") {
-        usingMaterial= createEnhancedMaterial();
+    } else if (name == "Default") {
+        usingMaterial = createEnhancedMaterial();
         usingMesh = new THREE.Points(dropsBuffer, usingMaterial);
+    } else if (name == "Dopa") {
+        usingMaterial = createDopaMaterial();
+        usingMesh = new THREE.Points(dropsBuffer, usingMaterial);
+        muonRateScale = 10;
+        bgRateScale = 10;
     }
     scene.add(usingMesh);
 }
@@ -148,7 +174,8 @@ function dump() {
 
 function castRandomMuon(time: number) {
     let bufIdx = droplets.length;
-    //console.log("muon! " + bufIdx + " droplets");
+    const sourceId = getSourceId();
+    console.log(`Muon(${sourceId})!` + bufIdx + " droplets");
 
     const point = getRandomPointInKb(kb.width, kb.height, kb.depth);
     const direction = rand.randomDirection();
@@ -167,21 +194,19 @@ function castRandomMuon(time: number) {
         const sensitivity = kb.getLocalSensitivity(current);
         const created = particle.sampleDroplets(sensitivity, sd).filter(d => kb.contains(d));
         const dropSize = rand.logNormal(2e-5);
-        created.forEach(d => droplets.push(new Droplet(d, bufIdx++, dropSize, time, time + rand.normalIn(0, 3000))));
+        created.forEach(d => droplets.push(new Droplet(d, bufIdx++, dropSize, time, time + rand.normalIn(0, 3000), sourceId)));
     }
-
-    // const geometry = new THREE.BufferGeometry().setFromPoints([p1,p2]);
-    // const material = new LineBasicMaterial({color: "orange"});
-    // const line = new THREE.Line(geometry, material);
-
-//    lines.push(line);
-//    scene.add(line);
 }
 
-// function clearLines(): void {
-//     lines.forEach(l => scene.remove(l));
-//     lines.splice(0);
-// }
+let sourceId = 1; // sourceId は1から。0は背景水滴専用
+const sourceIdMax = 65535;
+function getSourceId(): number {
+    if (sourceId == sourceIdMax) {
+        sourceId = 1;
+    }
+
+    return sourceId++;
+}
 
 function updateDrops(time: number, dt: number) {
     const now = time;
@@ -192,6 +217,7 @@ function updateDrops(time: number, dt: number) {
     const expiredAttr = dropsBuffer.getAttribute("expiredAt") as THREE.BufferAttribute;
     const createdAttr = dropsBuffer.getAttribute("createdAt") as THREE.BufferAttribute;
     const dropSizeAttr = dropsBuffer.getAttribute("dropSize") as THREE.BufferAttribute;
+    const sourceIdAttr = dropsBuffer.getAttribute("sourceId") as THREE.BufferAttribute;
     let i = 0;
     const nextDrops: Droplet[] = [];
 
@@ -215,6 +241,7 @@ function updateDrops(time: number, dt: number) {
         createdAttr.setX(i, d.createdAt);
         expiredAttr.setX(i, d.expiredAt);
         dropSizeAttr.setX(i, d.radius);
+        sourceIdAttr.setX(i, d.sourceId);
         i++;
     });
 
@@ -223,6 +250,7 @@ function updateDrops(time: number, dt: number) {
     createdAttr.needsUpdate = true;
     expiredAttr.needsUpdate = true;
     dropSizeAttr.needsUpdate = true;
+    sourceIdAttr.needsUpdate = true;
     droplets = nextDrops;
 }
 
@@ -244,7 +272,7 @@ function next(drop: Droplet, now: number) : Vector3 {
 function procRandomEvents(now: number, dt: number) {
 
     // Muon
-    const n = rand.poisson(muonRatePerSec * (dt/1000)) + reserved;
+    const n = rand.poisson(muonRatePerSec * muonRateScale * (dt/1000)) + reserved;
     reserved = 0;
     for (let i = 0; i < n; i++) {
         castRandomMuon(now);
@@ -252,7 +280,7 @@ function procRandomEvents(now: number, dt: number) {
 
     // background drops
 
-    const bgn = rand.poisson(bgRatePerSec * (dt/1000));
+    const bgn = rand.poisson(bgRatePerSec * bgRateScale * (dt/1000));
     for (let i = 0; i < bgn; i++) {
         const pos = new Vector3(
             rand.uniformIn(-kb.width/2, kb.width/2),
@@ -260,7 +288,7 @@ function procRandomEvents(now: number, dt: number) {
             rand.uniformIn(-kb.depth/2, kb.depth/2),
         )
         const dropSize = rand.logNormal(2e-5);
-        const bg = new Droplet(pos, droplets.length, dropSize, now, now + rand.normalIn(500, 2500));
+        const bg = new Droplet(pos, droplets.length, dropSize, now, now + rand.normalIn(500, 2500), 0);
         droplets.push(bg);
     }
 }

@@ -1,8 +1,11 @@
 import pixelVertexShader from "./droplet-pixel.vert.glsl?raw";
 import pixelFragmentShader from "./droplet-pixel.frag.glsl?raw";
 
-import enhancedVertexShader from "./droplet-enhanced.vert.glsl?raw";
-import enhancedFragmentShader from "./droplet-enhanced.frag.glsl?raw";
+import defaultVertexShader from "./droplet-default.vert.glsl?raw";
+import defaultFragmentShader from "./droplet-default.frag.glsl?raw";
+
+import dopaVertexShader from "./droplet-dopa.vert.glsl?raw";
+import dopaFragmentShader from "./droplet-dopa.frag.glsl?raw";
 
 import {ShaderMaterial} from "three";
 
@@ -19,7 +22,19 @@ export function createPixelMaterial() : ShaderMaterial {
 
 export function createEnhancedMaterial() : ShaderMaterial {
     return new ShaderMaterial({
-        vertexShader: enhancedVertexShader, fragmentShader: enhancedFragmentShader,
+        vertexShader: defaultVertexShader, fragmentShader: defaultFragmentShader,
+        transparent: true, depthWrite: false,
+        uniforms: {
+            time: {value: 0.0},
+            fadeoutDuration: { value: 1000 },
+            fadeinDuration: { value: 200 }
+        }
+    });
+}
+
+export function createDopaMaterial() : ShaderMaterial {
+    return new ShaderMaterial({
+        vertexShader: dopaVertexShader, fragmentShader: dopaFragmentShader,
         transparent: true, depthWrite: false,
         uniforms: {
             time: {value: 0.0},

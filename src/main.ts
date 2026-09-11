@@ -12,8 +12,10 @@ import {initDev} from "./devconf.ts";
 
 initDev();
 
+let muonRateScale = 1.0;
 // 1秒間にミューオンが飛来する平均回数
 const muonRatePerSec = 2.5;
+let bgRateScale = 1.0;
 // 1秒間に背景水滴を生成する平均回数
 const bgRatePerSec = 500;
 
@@ -136,6 +138,8 @@ function initControls()
 
 function switchShader(name: string) {
     dump();
+    muonRateScale = 1.0;
+    bgRateScale = 1.0;
     scene.remove(usingMesh);
     if (name == "Simple") {
         const glowTexture = createGlowTexture();
@@ -157,6 +161,8 @@ function switchShader(name: string) {
     } else if (name == "Dopa") {
         usingMaterial = createDopaMaterial();
         usingMesh = new THREE.Points(dropsBuffer, usingMaterial);
+        muonRateScale = 10;
+        bgRateScale = 10;
     }
     scene.add(usingMesh);
 }
@@ -266,7 +272,7 @@ function next(drop: Droplet, now: number) : Vector3 {
 function procRandomEvents(now: number, dt: number) {
 
     // Muon
-    const n = rand.poisson(muonRatePerSec * (dt/1000)) + reserved;
+    const n = rand.poisson(muonRatePerSec * muonRateScale * (dt/1000)) + reserved;
     reserved = 0;
     for (let i = 0; i < n; i++) {
         castRandomMuon(now);
@@ -274,7 +280,7 @@ function procRandomEvents(now: number, dt: number) {
 
     // background drops
 
-    const bgn = rand.poisson(bgRatePerSec * (dt/1000));
+    const bgn = rand.poisson(bgRatePerSec * bgRateScale * (dt/1000));
     for (let i = 0; i < bgn; i++) {
         const pos = new Vector3(
             rand.uniformIn(-kb.width/2, kb.width/2),

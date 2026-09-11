@@ -8,7 +8,9 @@ import {Droplet} from "./models/droplet.ts";
 import {Muon} from "./models/ChargedParticle.ts";
 import {boltzmann} from "./utils/utils.ts";
 import {createEnhancedMaterial, createPixelMaterial} from "./shaders/DropletMaterial.ts";
+import {initDev} from "./devconf.ts";
 
+initDev();
 
 // 1秒間にミューオンが飛来する平均回数
 const muonRatePerSec = 2.5;
@@ -108,6 +110,18 @@ function initControls()
 {
     const shaderSelector = document.querySelector('#shader-selector')! as HTMLSelectElement;
 
+    const params = new URLSearchParams(window.location.search);
+    const shaderQuery = params.get("shader");
+
+    if (shaderSelector && shaderQuery) {
+        const exists = Array.from(shaderSelector.options)
+            .some(option => option.value === shaderQuery);
+
+        if (exists) {
+            shaderSelector.value = shaderQuery;
+        }
+    }
+
     shaderSelector.addEventListener("change", e => {
         switchShader(shaderSelector.value);
     });
@@ -120,7 +134,7 @@ function initControls()
 function switchShader(name: string) {
     dump();
     scene.remove(usingMesh);
-    if (name == "Default") {
+    if (name == "Simple") {
         const glowTexture = createGlowTexture();
         const dropsMaterial = new THREE.PointsMaterial({
             size: 0.04,
@@ -134,7 +148,7 @@ function switchShader(name: string) {
     } else if (name == "Pixel") {
         usingMaterial = createPixelMaterial();
         usingMesh = new THREE.Points(dropsBuffer, usingMaterial);
-    } else if (name == "Enhanced") {
+    } else if (name == "Default") {
         usingMaterial= createEnhancedMaterial();
         usingMesh = new THREE.Points(dropsBuffer, usingMaterial);
     }

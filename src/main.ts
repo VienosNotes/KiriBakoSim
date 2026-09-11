@@ -175,7 +175,7 @@ function dump() {
 function castRandomMuon(time: number) {
     let bufIdx = droplets.length;
     const sourceId = getSourceId();
-    console.log(`Muon(${sourceId})!` + bufIdx + " droplets");
+    //console.log(`Muon(${sourceId})!` + bufIdx + " droplets");
 
     const point = getRandomPointInKb(kb.width, kb.height, kb.depth);
     const direction = rand.randomDirection();

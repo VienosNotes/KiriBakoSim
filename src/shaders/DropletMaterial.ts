@@ -5,6 +5,7 @@ import defaultVertexShader from "./droplet-default.vert.glsl?raw";
 import defaultFragmentShader from "./droplet-default.frag.glsl?raw";
 
 import dopaVertexShader from "./droplet-dopa.vert.glsl?raw";
+import dopaFragmentShader from "./droplet-dopa.frag.glsl?raw";
 
 import {ShaderMaterial} from "three";
 
@@ -33,7 +34,7 @@ export function createEnhancedMaterial() : ShaderMaterial {
 
 export function createDopaMaterial() : ShaderMaterial {
     return new ShaderMaterial({
-        vertexShader: dopaVertexShader, fragmentShader: defaultFragmentShader,
+        vertexShader: dopaVertexShader, fragmentShader: dopaFragmentShader,
         transparent: true, depthWrite: false,
         uniforms: {
             time: {value: 0.0},

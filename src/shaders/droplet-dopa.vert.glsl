@@ -11,6 +11,7 @@ varying float vOpacity;
 varying float vRed;
 varying float vGreen;
 varying float vBlue;
+varying float vSourceId;
 
 vec3 hueToRgb(float h)
 {
@@ -27,7 +28,8 @@ void main() {
 
     float beat = (2.0 - (mod(time, 500.0) / 500.0));
 
-    gl_PointSize = 4.0 * dropSize * 100000.0;
+    gl_PointSize = 8.0 * dropSize * 100000.0;
+    vSourceId = sourceId;
 
     vOpacity = clamp((time - createdAt), 0.0, fadeinDuration) / fadeinDuration;
     vOpacity = vOpacity * clamp((expiredAt - time), 0.0, fadeoutDuration) / fadeoutDuration;
